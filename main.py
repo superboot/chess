@@ -8,7 +8,6 @@ import sys
 from time import sleep
 
 
-def intro():
 
 def createBoxOfPieces():
     '''
