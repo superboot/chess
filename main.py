@@ -8,6 +8,52 @@ import sys
 from time import sleep
 
 
+class ChessGame():
+    '''
+    A game that holds the move history, time clocks, etc.
+    '''
+    pass
+
+
+class Board():
+    '''
+    A chessboard that holds peices.
+    '''
+    pass
+
+
+class Piece():
+    '''
+    A chess piece.
+    '''
+    
+    def __init__(self, color, typeOfPiece):
+        ''' Set the type of piece, the color, and what image it will use.
+        '''
+        self.typeOfPiece = typeOfPiece
+        self.color = color
+        self.image = self.loadImage(image)
+        self.rect = self.image.get_rect() # A call to a pygame method of the pygame.image object.
+
+    def loadImage(self):
+        '''Loads an image for the piece based on the type of piece it is. Right now it uses PyGame.
+
+        :returns: A pygame.image object.
+        '''
+        # Set the color code.
+        if self.color == 'white':
+            colorCode = 'w'
+        elif self.color == 'black':
+            colorCode = 'b'
+
+        rv = pygame.image.load(f"{colorCode}-{self.typeOfPiece}.png")} # load the image
+        return rv
+
+
+
+
+
+
 
 def createBoxOfPieces():
     '''
