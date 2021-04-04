@@ -12,14 +12,66 @@ class ChessGame():
     '''
     A game that holds the move history, time clocks, etc.
     '''
-    pass
+    def __init__(self):
+        ''' 
+        '''
+        pass
 
 
 class Board():
     '''
     A chessboard that holds peices.
     '''
-    pass
+
+    def __init__(self, orientation = 'white'):
+        '''Loads the board image, and creates the pygame objects for it.
+        '''
+        self.image = self.loadImage(image)
+        self.rect = self.image.get_rect()
+        self.orientation = orientation
+        self.createBoxOfPieces()
+
+    def flipBoard(self):
+        '''Flips the board to view it from the other side.
+        '''
+        pass
+
+    def reset(self):
+        ''' Resets the pieces to the starting position.
+        '''
+        pass
+
+    def createBoxOfPieces(self):
+        ''' Creates the box of pieces.
+        '''
+        self.box = set()
+        for color in 'white', 'black':
+            for piece in ('knight', 'bishop', 'rook', 'queen', 'king'):
+                self.box.add(Piece(color, piece))
+            for pawnNumber in range(8):
+                self.box.add(Piece(color, 'pawn'))
+
+
+class Location():
+    ''' A square on the chess board.
+    '''
+    def __init__(self, row, column):
+        ''' Setup the properties of the location.
+        '''
+        self.row = row
+        self.column = column
+        self.color = self.calculateColor()
+        self.occupant = None
+
+    def calculateColor(self):
+        ''' Calculates the color of the square.
+        '''
+        columns = ['x', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+        if self.row % 2 == 1 and columns.index(self.column) % 2 == 1:
+            return 'black'
+        else:
+            return 'white'
+    
 
 
 class Piece():
@@ -34,6 +86,19 @@ class Piece():
         self.color = color
         self.image = self.loadImage(image)
         self.rect = self.image.get_rect() # A call to a pygame method of the pygame.image object.
+        self.location = None # I think this needs to be a class Location, which are squares on the chess board.
+
+    @property
+    def width(self):
+        ''' Retrieves the width of the rect which is the width of the piece.
+        '''
+        return self.rect.width
+        
+    @property
+    def height(self):
+        ''' Retrieves the height of the rect which is the height of the piece.
+        '''
+        return self.rect.height
 
     def loadImage(self):
         '''Loads an image for the piece based on the type of piece it is. Right now it uses PyGame.
@@ -46,12 +111,15 @@ class Piece():
         elif self.color == 'black':
             colorCode = 'b'
 
-        rv = pygame.image.load(f"{colorCode}-{self.typeOfPiece}.png")} # load the image
+        rv = pygame.image.load(f"{colorCode}-{self.typeOfPiece}.png") # load the image
         return rv
 
 
 
 
+#########################################################################################
+# FUNCTIONAL STYLE 
+#########################################################################################
 
 
 
