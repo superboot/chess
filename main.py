@@ -9,8 +9,7 @@ from time import sleep
 
 
 class ChessGame():
-    '''
-    A game that holds the move history, time clocks, etc.
+    ''' A game that holds the move history, time clocks, etc.
     '''
     def __init__(self):
         ''' 
@@ -19,8 +18,7 @@ class ChessGame():
 
 
 class Board():
-    '''
-    A chessboard that holds peices.
+    ''' A chessboard that holds peices.
     '''
 
     def __init__(self, orientation = 'white'):
@@ -30,6 +28,7 @@ class Board():
         self.rect = self.image.get_rect()
         self.orientation = orientation
         self.createBoxOfPieces()
+        self.createGrid()
 
     def flipBoard(self):
         '''Flips the board to view it from the other side.
@@ -51,11 +50,21 @@ class Board():
             for pawnNumber in range(8):
                 self.box.add(Piece(color, 'pawn'))
 
+    def createGrid(self):
+        ''' Create the grid of squares that make up the board, setting them as attributes of this instance.
+        '''
+        self.grid = []
+        for column in 'abcdefgh':
+            for row in (1,2,3,4,5,6,7,8):
+                loc = Location(column, row)
+                self.grid.append(loc)
+                setattr(self, f"{column}{row}", loc)
+
 
 class Location():
     ''' A square on the chess board.
     '''
-    def __init__(self, row, column):
+    def __init__(self, column, row):
         ''' Setup the properties of the location.
         '''
         self.row = row
@@ -71,12 +80,10 @@ class Location():
             return 'black'
         else:
             return 'white'
-    
 
 
 class Piece():
-    '''
-    A chess piece.
+    ''' A chess piece.
     '''
     
     def __init__(self, color, typeOfPiece):
