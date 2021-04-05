@@ -26,17 +26,70 @@ class Clock():
     ''' A time keeping device.
     '''
 
-    def __init__(self, length):
-        self.length = length
+    def __init__(self, timeLimmit):
+        if type(timeLimmit) is not in (int, float):
+            timeLimmit = self.convertStrTimeToSeconds(timeLimmit)
+        self.timeLimmit = timeLimmit 
+
+    def convertStrTimeToSeconds(timeString):
+        ''' Converts a colon-delimited time string hours:minutes:seconds.mentissa to float.
+
+        Possible input formats:
+            23:59:59.99 -> hour:minute:second.metissa
+            59:59.99 -> minute:seconds.mentissa
+            59.99 or 59 -> seconds.metissa or seconds
+        -> float
+        '''
+        rv = 0
+        if string.find(':'):
+            timeElements = string.split(':')
+            while len(timeElements) > 0:
+                if len(timeElements) == 3:
+                    rv += int(timeElements[0]) * 3600 # convert string hours to seconds.
+                    timeElements = timeElements[1:]
+                    continue
+                if len(timeElements) == 2:
+                    rv += int(timeElements[0]) * 60 # convert string minutes to seconds.
+                    timeElements = timeElements[1:]
+                    continue
+                if len(timeElements) == 1:
+                    rv += int(timeElements[0]) # Add the seconds.
+                    break
+            return rv
+
+            
+
+
 
     def start(self):
         '''Starts the clock.
         '''
-        pass
         self.startTime = time.time()
+    
+    @property
+    def rawTimeElapsed(self):
+        ''' Returns the time elapsed in seconds and fractions of a second.
+        -> float
+        '''
+        now = time.time()
+        delta = now - self.startTime
+        return delta
 
-    def timeLeft(self):
-        ''' Returns a string representation of the time remaining.
+    @property
+    def rawTimeRemaining(self):
+        ''' Returns the time remaining in seconds.
+        -> float
+        '''
+        return self.timeLimmit - self.rawTimeElapsed
+
+    def timeRemaining(self):
+        ''' Returns a string with time broken into hours minutes seconds.
+        -> str
+        '''
+        hours, remainder = (str(x), y for x, y in divmod(self.rawTimeRemaining, 60))
+        minutes, remainder = (str(x), y for x, y in divmod(remainder, 60))
+        seconds, mentissa = str(remainder).split('.') 
+        return f"{hours}:{minutes}:{seconds}.{mentissa}"
 
 
 class Player():
