@@ -5,16 +5,44 @@ This module is a simple chess program as a starting project for working with pyg
 import pygame
 import pygame.locals as pl
 import sys
-from time import sleep
+import time
+
 
 
 class ChessGame():
     ''' A game that holds the move history, time clocks, etc.
     '''
-    def __init__(self):
-        ''' 
+    def __init__(self, p1 = '', p2 = ''):
+        '''Setup the clocks and the equipment for a new game. 
+        '''
+        board = Board()
+        p1 = Player(name=p1)
+        p2 = Player(name=p2)
+        clock1 = Clock()
+        clock2 = Clock()
+        
+
+class Clock():
+    ''' A time keeping device.
+    '''
+
+    def __init__(self, length):
+        self.length = length
+
+    def start(self):
+        '''Starts the clock.
         '''
         pass
+        self.startTime = time.time()
+
+    def timeLeft(self):
+        ''' Returns a string representation of the time remaining.
+
+
+class Player():
+    ''' A player with a game history and such.
+    '''
+    pass
 
 
 class Board():
@@ -81,6 +109,12 @@ class Location():
         else:
             return 'white'
 
+    def __str__(self):
+        ''' Returns the string of the address.
+        '''
+        column = self.column.upper()
+        row = self.row
+        return f"{column}{row}"
 
 class Piece():
     ''' A chess piece.
