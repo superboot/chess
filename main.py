@@ -27,7 +27,7 @@ class Clock():
     '''
 
     def __init__(self, timeLimmit):
-        if type(timeLimmit) is not in (int, float):
+        if type(timeLimmit) not in (int, float):
             timeLimmit = self.convertStrTimeToSeconds(timeLimmit)
         self.timeLimmit = timeLimmit 
 
@@ -41,8 +41,8 @@ class Clock():
         -> float
         '''
         rv = 0
-        if string.find(':'):
-            timeElements = string.split(':')
+        if ':' in timeString:
+            timeElements = timeString.split(':')
             while len(timeElements) > 0:
                 if len(timeElements) == 3:
                     rv += int(timeElements[0]) * 3600 # convert string hours to seconds.
@@ -55,11 +55,9 @@ class Clock():
                 if len(timeElements) == 1:
                     rv += int(timeElements[0]) # Add the seconds.
                     break
-            return rv
-
-            
-
-
+        else: # There are no delimiters.
+            rv = float(timeString)
+        return rv
 
     def start(self):
         '''Starts the clock.
@@ -82,14 +80,20 @@ class Clock():
         '''
         return self.timeLimmit - self.rawTimeElapsed
 
+    @property
     def timeRemaining(self):
         ''' Returns a string with time broken into hours minutes seconds.
         -> str
         '''
-        hours, remainder = (str(x), y for x, y in divmod(self.rawTimeRemaining, 60))
-        minutes, remainder = (str(x), y for x, y in divmod(remainder, 60))
+        hours, remainder = divmod(self.rawTimeRemaining, 60)
+        hours = f"{str(int(hours))}:" if hours > 0 else ''
+        minutes, remainder = divmod(remainder, 60)
+        minutes = f"{str(int(minutes))}:" if minutes > 0 else ''
         seconds, mentissa = str(remainder).split('.') 
-        return f"{hours}:{minutes}:{seconds}.{mentissa}"
+        seconds = str(int(seconds)) if int(seconds) > 0 else ''
+        mentissa = mentissa[:3] # Get the first 3 decimal digits and chop the rest.
+        seconds = f"{seconds}.{mentissa}"
+        return f"{hours}{minutes}{seconds}"
 
 
 class Player():
@@ -168,6 +172,7 @@ class Location():
         column = self.column.upper()
         row = self.row
         return f"{column}{row}"
+
 
 class Piece():
     ''' A chess piece.
@@ -330,4 +335,9 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    c = Clock(60)
+    c.start()
+    time.sleep(3)
+    print(c.timeRemaining)
+    pass
