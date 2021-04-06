@@ -12,6 +12,7 @@ class State():
             Why? Because FOOP.
             It will recieve attributes dynamicly as things are changed.
     '''
+    clickedPiece = None
     pass
 
 
@@ -28,7 +29,7 @@ class Engine(State):
         self.screenSize = (self.screenWidth, self.screenHeight)
         self.screen = pygame.display.set_mode(self.screenSize)
         self.updateDisplay()
-        #self.loop()
+        self.loop()
 
     def updateDisplay(self):
         ''' Updates the display with the latest blits.
@@ -43,12 +44,37 @@ class Engine(State):
         # Post the updates to the display
         pygame.display.flip()
 
+    def updateClickedPieceLocation(self):
+        ''' If there is a clicked piece, keep it under the cursor.
+        '''
+        if State.clickedPiece is None:
+            pass
+        else:
+            mousePosition = pygame.mouse.get_pos()
+            State.clickedPiece.rect.center = mousePosition
+
+    def findClickedPiece(self, position):
+        ''' Finds the piece under the cursor at the position given.
+                -> Piece object of the chosen game piece.
+        '''
+        for piece in Piece.register:
+            if piece.rect.collidepoint(position):
+                print(str(piece))
+                return piece
 
     def loop(self):
-        # Watch for a quit action
-        while 1:
+        while True:
             for event in pygame.event.get():
-                if event .type == pygame.QUIT: sys.exit()
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    clickPosition = pygame.mouse.get_pos()
+                    chosenPiece = self.findClickedPiece(clickPosition)
+                    State.clickedPiece = chosenPiece
+                if event.type == pygame.MOUSEBUTTONUP:
+                    State.clickedPiece = None
+                    pass # Code to place piece on square it is over.
+                if event.type == pygame.QUIT: sys.exit()
+            self.updateClickedPieceLocation()
+
 
 
 class ChessGame(State):
@@ -331,6 +357,11 @@ class Piece(State):
         self.address = address
         addressCenter = State.game.board.grid[address].rect.center
         self.rect.center = addressCenter
+
+    def moveTo(self, newCenter):
+        ''' Moves the piece (rect of the piece) to the new center newCenter.
+        '''
+        self.rect.center = newCenter
 
     def __str__(self):
         ''' Returns a string describing the object.
