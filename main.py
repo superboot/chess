@@ -7,22 +7,67 @@ import pygame.locals as pl
 import sys
 import time
 
+class State():
+    ''' This is the class that will hold refferences to all common state as class atributes.
+            Why? Because FOOP.
+            It will recieve attributes dynamicly as things are changed.
+    '''
+    pass
 
 
-class ChessGame():
+class Engine(State):
+    ''' This class runs pygame at large.
+    '''
+
+    def __init__(self, game, screenWidth = 888, screenHeight = 888):
+        State.engine = self
+        pygame.init()
+        self.game = game
+        self.screenWidth = screenWidth
+        self.screenHeight = screenHeight
+        self.screenSize = (self.screenWidth, self.screenHeight)
+        self.screen = pygame.display.set_mode(self.screenSize)
+        self.updateDisplay()
+        #self.loop()
+
+    def updateDisplay(self):
+        ''' Updates the display with the latest blits.
+        '''
+        # Blit board
+        self.screen.blit(self.game.board.image, self.game.board.rect)
+        # Blit pieces
+        for location in self.game.board.grid.values():
+            if location.occupant is not None:
+                self.screen.blit(location.occupant.image, location.occupant.rect)
+            
+        # Post the updates to the display
+        pygame.display.flip()
+
+
+    def loop(self):
+        # Watch for a quit action
+        while 1:
+            for event in pygame.event.get():
+                if event .type == pygame.QUIT: sys.exit()
+
+
+class ChessGame(State):
     ''' A game that holds the move history, time clocks, etc.
     '''
+    register = [] # The list of all instances.
     def __init__(self, p1 = '', p2 = ''):
         '''Setup the clocks and the equipment for a new game. 
         '''
+        State.game = self
+        self.register.append(self) # Add's this new instance to the register kept in the class-atribute, "register". 
         board = Board()
         p1 = Player(name=p1)
         p2 = Player(name=p2)
-        clock1 = Clock()
-        clock2 = Clock()
+        clock1 = Clock('60:00')
+        clock2 = Clock('60:00')
         
 
-class Clock():
+class Clock(State):
     ''' A time keeping device.
     '''
 
@@ -31,7 +76,7 @@ class Clock():
             timeLimmit = self.convertStrTimeToSeconds(timeLimmit)
         self.timeLimmit = timeLimmit 
 
-    def convertStrTimeToSeconds(timeString):
+    def convertStrTimeToSeconds(self, timeString):
         ''' Converts a colon-delimited time string hours:minutes:seconds.mentissa to float.
 
         Possible input formats:
@@ -96,24 +141,30 @@ class Clock():
         return f"{hours}{minutes}{seconds}"
 
 
-class Player():
+class Player(State):
     ''' A player with a game history and such.
     '''
-    pass
+    def __init__(self, name, rank=400):
+        self.name = name
+        self.rank = rank
 
 
-class Board():
+class Board(State):
     ''' A chessboard that holds peices.
     '''
 
     def __init__(self, orientation = 'white'):
         '''Loads the board image, and creates the pygame objects for it.
         '''
-        self.image = self.loadImage(image)
+        State.game.board = self # Give a refferance to all sibling classes to this instance.
+        self.image = self.loadImage()
         self.rect = self.image.get_rect()
         self.orientation = orientation
-        self.createBoxOfPieces()
         self.createGrid()
+        self.reset()
+        self.whiteCaptures = []
+        self.blackCaptures = []
+
 
     def flipBoard(self):
         '''Flips the board to view it from the other side.
@@ -123,30 +174,76 @@ class Board():
     def reset(self):
         ''' Resets the pieces to the starting position.
         '''
-        pass
-
-    def createBoxOfPieces(self):
-        ''' Creates the box of pieces.
-        '''
-        self.box = set()
-        for color in 'white', 'black':
-            for piece in ('knight', 'bishop', 'rook', 'queen', 'king'):
-                self.box.add(Piece(color, piece))
-            for pawnNumber in range(8):
-                self.box.add(Piece(color, 'pawn'))
+        for address in self.grid.keys():
+            # Add the pawns
+            if address[1] == '2': # If we are looking at a row two cell.
+                self.grid[address].occupant = Piece('white', 'pawn', address = address); continue
+            if address[1] == '7':
+                self.grid[address].occupant = Piece('black', 'pawn', address = address); continue
+            # Add the rooks
+            if address[0] == 'a' or address[0] == 'h':
+                if address[1] == '1':
+                    self.grid[address].occupant = Piece('white', 'rook', address = address); continue
+                if address[1] == '8':
+                    self.grid[address].occupant = Piece('black', 'rook', address = address); continue
+            # Add the knights
+            if address[0] == 'b' or address[0] == 'g':
+                if address[1] == '1':
+                    self.grid[address].occupant = Piece('white', 'knight', address = address); continue
+                if address[1] == '8':
+                    self.grid[address].occupant = Piece('black', 'knight', address = address); continue
+            # Add the bishops
+            if address[0] == 'c' or address[0] == 'f':
+                if address[1] == '1':
+                    self.grid[address].occupant = Piece('white', 'bishop', address = address); continue
+                if address[1] == '8':
+                    self.grid[address].occupant = Piece('black', 'bishop', address = address); continue
+            # Add the queens
+            if address[0] == 'd':
+                if address[1] == '1':
+                    self.grid[address].occupant = Piece('white', 'queen', address = address); continue
+                if address[1] == '8':
+                    self.grid[address].occupant = Piece('black', 'queen', address = address); continue
+            # Add the kings
+            if address[0] == 'e':
+                if address[1] == '1':
+                    self.grid[address].occupant = Piece('white', 'king', address = address); continue
+                if address[1] == '8':
+                    self.grid[address].occupant = Piece('black', 'king', address = address); continue
+            else:
+                # Clear all other sqares.
+                self.grid[address].occupant = None
 
     def createGrid(self):
         ''' Create the grid of squares that make up the board, setting them as attributes of this instance.
         '''
-        self.grid = []
+        self.grid = {}
         for column in 'abcdefgh':
             for row in (1,2,3,4,5,6,7,8):
                 loc = Location(column, row)
-                self.grid.append(loc)
+                self.grid[f"{column}{row}"] = loc
                 setattr(self, f"{column}{row}", loc)
 
+    def loadImage(self):
+        '''Loads an image for the piece based on the type of piece it is. Right now it uses PyGame.
 
-class Location():
+        :returns: A pygame.image object.
+        '''
+        rv = pygame.image.load("chessboard-888x888.gif") # load the image
+        return rv
+
+    @property
+    def width(self):
+        rv = self.rect.width
+        return rv
+
+    @property
+    def height(self):
+        rv = self.rect.height
+        return rv
+
+
+class Location(State):
     ''' A square on the chess board.
     '''
     def __init__(self, column, row):
@@ -171,21 +268,29 @@ class Location():
         '''
         column = self.column.upper()
         row = self.row
-        return f"{column}{row}"
+        return f"Address: {column}{row}\nOccupant: {self.occupant}"
+
+    def __repr__(self):
+        ''' Returns the representation of the object.
+        '''
+        return str(self)
 
 
-class Piece():
+class Piece(State):
     ''' A chess piece.
     '''
+    register = [] # The register of instances of this class.
     
-    def __init__(self, color, typeOfPiece):
+    def __init__(self, color, typeOfPiece, address=None):
         ''' Set the type of piece, the color, and what image it will use.
         '''
+        self.register.append(self) # Add's this new instance to the register kept in the class-atribute, "register". 
         self.typeOfPiece = typeOfPiece
         self.color = color
-        self.image = self.loadImage(image)
+        self.image = self.loadImage()
         self.rect = self.image.get_rect() # A call to a pygame method of the pygame.image object.
-        self.location = None # I think this needs to be a class Location, which are squares on the chess board.
+        if address is not None:
+            self.place(address)
 
     @property
     def width(self):
@@ -213,131 +318,23 @@ class Piece():
         rv = pygame.image.load(f"{colorCode}-{self.typeOfPiece}.png") # load the image
         return rv
 
+    def place(self, address):
+        ''' Places piece on the square given by address eg. E4.
+        '''
+        self.address = address
+        newCenter = State.game.board.grid[address].rect.center
+        self.rect.move_ip(*newCenter)
 
-
-
-#########################################################################################
-# FUNCTIONAL STYLE 
-#########################################################################################
-
-
-
-def createBoxOfPieces():
-    '''
-    Creates a nested dictionary holding the 32 chess pieces, both images (loaded once each) and rects for each descrete piece.
-
-    Returns the dictionary.
-    '''
-    boxOfPieces = {'w': {}, 'b': {}}
-    for color in 'w', 'b':
-        for piece in ('pawn', 'knight', 'bishop', 'rook', 'queen', 'king'):
-            boxOfPieces[color][piece] = {'image': pygame.image.load(f"{color}-{piece}.png")} # load the image
-            boxOfPieces[color][piece]['rects'] = [boxOfPieces[color][piece]['image'].get_rect()] # get a rect for the image just loaded.
-        for pawnNumber in range(8):
-            boxOfPieces[color]['pawn']['rects'].append( boxOfPieces[color]['pawn']['image'].get_rect() )
-    return boxOfPieces
-
-def placePawns(boxOfPieces, color):
-    '''
-    Places the white pawns on the bottom of the board for the start of a game.
-    '''
-    screenHeight = 888
-    squareWidth = 111
-    squareHeight = 111
-    pawnWidth = boxOfPieces[color]['pawn']['rects'][0].width 
-    pawnHeight = boxOfPieces[color]['pawn']['rects'][0].height
-    topOfPawnRow = screenHeight - pawnHeight - squareHeight
-    startingX = squareWidth / 2 - pawnWidth / 2
-    for pawnNumber in range(8):
-        boxOfPieces[color]['pawn']['rects'][pawnNumber].update(startingX + squareWidth * pawnNumber + 1, topOfPawnRow, pawnWidth, pawnHeight)
-
-def placeKnights(boxOfPieces, color):
-    '''
-    Places the knights of the color <color> in their starting positions for the game.
-    '''
-    pass
-
-def placeBishops(boxOfPieces, color):
-    '''
-    Places the Bishops of the color <color> in their starting positions for the game.
-    '''
-    pass
-
-def placeRooks(boxOfPieces, color):
-    '''
-    Places the Rooks of the color <color> in their starting positions for the game.
-    '''
-    pass
-
-def placeQueen(boxOfPieces, color):
-    '''
-    Places the Queen of the color <color> in their starting positions for the game.
-    '''
-    pass
-
-def placeKing(boxOfPieces, color):
-    '''
-    Places the King of the color <color> in their starting positions for the game.
-    '''
-    pass
-
-def placePieces(boxOfPieces):
-    '''
-    Manipulates the box of pieces in place, arranging the rects of the pieces across the board.
-    '''
-    for color in ('w', 'b'):
-        placePawns(boxOfPieces, color)
-        placeKnights(boxOfPieces, color)
-        placeBishops(boxOfPieces, color)
-        placeRooks(boxOfPieces, color)
-        placeQueen(boxOfPieces, color)
-        placeKing(boxOfPieces, color)
-
-def blitThePieces(screen, boxOfPieces):
-    '''
-    Blits all the rects of the pieces in the box to the screen.
-    '''
-    for color in boxOfPieces.keys():
-        for piece in boxOfPieces[color].keys():
-            for rect in boxOfPieces[color][piece]['rects']:
-                screen.blit(boxOfPieces[color][piece]['image'], rect)
-                
-def blitTheBoard(screen, board):
-    '''
-    Blits the board image onto the screen.
-    '''
-    screen.blit(board, board.get_rect())
-
-        
-def main():
-    pygame.init()
-
-    screenSize = screenWidth, screenHeight = 888, 888
-    black = 0,0,0
-
-    screen = pygame.display.set_mode(screenSize)
-
-    board = pygame.image.load("chessboard-888x888.gif")
-
-    boxOfPieces = createBoxOfPieces()
-
-    placePieces(boxOfPieces) # in place manipulation
-
-    blitTheBoard(screen, board)
-    blitThePieces(screen, boxOfPieces)
+    def __str__(self):
+        ''' Returns a string describing the object.
+        '''
+        return f"A {self.typeOfPiece} on {self.address}."
     
-    pygame.display.flip()
 
-    # Watch for a quit action.
-    while 1:
-        for event in pygame.event.get():
-            if event .type == pygame.QUIT: sys.exit()
+def main():
+    game = ChessGame('john', 'paul')
+    engine = Engine(game)
 
 
 if __name__ == '__main__':
-    # main()
-    c = Clock(60)
-    c.start()
-    time.sleep(3)
-    print(c.timeRemaining)
-    pass
+    main()
