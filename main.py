@@ -218,9 +218,15 @@ class Board(State):
         ''' Create the grid of squares that make up the board, setting them as attributes of this instance.
         '''
         self.grid = {}
-        for column in 'abcdefgh':
+        squareWidth = State.game.board.rect.width / 8
+        squareHeight = State.game.board.rect.height / 8
+        columns = 'abcdefgh'
+        for column in columns:
+            xOffset = squareWidth * columns.find(column) # Calculate the pixle position of this column.
             for row in (1,2,3,4,5,6,7,8):
-                loc = Location(column, row)
+                yOffset = squareHeight * (row - 1) # Calculate the pixle position of this row.
+                rect = pygame.Rect(xOffset, yOffset, squareWidth, squareHeight)
+                loc = Location(column, row, rect)
                 self.grid[f"{column}{row}"] = loc
                 setattr(self, f"{column}{row}", loc)
 
@@ -246,11 +252,12 @@ class Board(State):
 class Location(State):
     ''' A square on the chess board.
     '''
-    def __init__(self, column, row):
+    def __init__(self, column, row, rect):
         ''' Setup the properties of the location.
         '''
         self.row = row
         self.column = column
+        self.rect = rect
         self.color = self.calculateColor()
         self.occupant = None
 
@@ -322,7 +329,8 @@ class Piece(State):
         ''' Places piece on the square given by address eg. E4.
         '''
         self.address = address
-        newCenter = State.game.board.grid[address].rect.center
+        addressCenter = State.game.board.grid[address].rect.center
+        newCenter = (int(addressCenter[0] - (self.width / 2)), int(addressCenter[1] - (self.height / 2)))
         self.rect.move_ip(*newCenter)
 
     def __str__(self):
@@ -330,10 +338,15 @@ class Piece(State):
         '''
         return f"A {self.typeOfPiece} on {self.address}."
     
+def config():
+    ''' Configures the game.
+    '''
 
 def main():
+    config()
     game = ChessGame('john', 'paul')
     engine = Engine(game)
+
 
 
 if __name__ == '__main__':
