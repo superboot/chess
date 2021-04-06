@@ -37,9 +37,9 @@ class Engine(State):
         # Blit board
         self.screen.blit(self.game.board.image, self.game.board.rect)
         # Blit pieces
-        for location in self.game.board.grid.values():
-            if location.occupant is not None:
-                self.screen.blit(location.occupant.image, location.occupant.rect)
+        for piece in Piece.register:
+            self.screen.blit(piece.image, piece.rect)
+
             
         # Post the updates to the display
         pygame.display.flip()
@@ -47,9 +47,7 @@ class Engine(State):
     def updateClickedPieceLocation(self):
         ''' If there is a clicked piece, keep it under the cursor.
         '''
-        if State.clickedPiece is None:
-            pass
-        else:
+        if State.clickedPiece is not None:
             mousePosition = pygame.mouse.get_pos()
             State.clickedPiece.rect.center = mousePosition
 
@@ -59,22 +57,53 @@ class Engine(State):
         '''
         for piece in Piece.register:
             if piece.rect.collidepoint(position):
-                print(str(piece))
                 return piece
+
+    def findDropSquare(self, piece):
+        ''' Find the square a piece is dropped on.
+        '''
+        centerOfPiece = piece.rect.center
+        for square in State.game.board.grid.values():
+            if square.rect.collidepoint(centerOfPiece):
+                return square.address
+
+    def placeClickedPiece(self, address):
+        ''' Places the clicked piece into the center of the square at the given address.
+        '''
+        State.clickedPiece.place(address)
+
+    def setClickedPiece(self, piece):
+        ''' Sets the State.clickedPiece attribute to the clicked piece.
+        '''
+        State.clickedPiece = piece
+
+    def mouseClick(self):
+        ''' Checks if something interesting was clicked on, and does the thing needed.
+        '''
+        clickPosition = pygame.mouse.get_pos()
+        possibleChosenPiece = self.findClickedPiece(clickPosition)
+        if possibleChosenPiece is not None:
+            chosenPiece = possibleChosenPiece
+            self.setClickedPiece(chosenPiece)
+
+    def mouseRelease(self):
+        ''' Does the actions required when the mouse button is released.
+        '''
+        if State.clickedPiece is not None:
+            newAddress = self.findDropSquare(State.clickedPiece)
+            self.placeClickedPiece(newAddress)
+            State.clickedPiece = None
 
     def loop(self):
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    clickPosition = pygame.mouse.get_pos()
-                    chosenPiece = self.findClickedPiece(clickPosition)
-                    State.clickedPiece = chosenPiece
+                    self.mouseClick()
                 if event.type == pygame.MOUSEBUTTONUP:
-                    State.clickedPiece = None
-                    pass # Code to place piece on square it is over.
+                    self.mouseRelease()
                 if event.type == pygame.QUIT: sys.exit()
             self.updateClickedPieceLocation()
-
+            self.updateDisplay()
 
 
 class ChessGame(State):
@@ -283,6 +312,7 @@ class Location(State):
         '''
         self.row = row
         self.column = column
+        self.address = f"{column}{row}"
         self.rect = rect
         self.color = self.calculateColor()
         self.occupant = None
