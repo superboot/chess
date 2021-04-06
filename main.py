@@ -330,8 +330,7 @@ class Piece(State):
         '''
         self.address = address
         addressCenter = State.game.board.grid[address].rect.center
-        newCenter = (int(addressCenter[0] - (self.width / 2)), int(addressCenter[1] - (self.height / 2)))
-        self.rect.move_ip(*newCenter)
+        self.rect.center = addressCenter
 
     def __str__(self):
         ''' Returns a string describing the object.
