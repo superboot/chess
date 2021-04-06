@@ -326,6 +326,13 @@ class Location(State):
         else:
             return 'white'
 
+    def isEmpty(self):
+        ''' Checks to see if this location is empty or not.
+        '''
+        if self.occupant is None:
+            return True
+        return False
+
     def __str__(self):
         ''' Returns the string of the address.
         '''
@@ -385,6 +392,8 @@ class Piece(State):
         ''' Places piece on the square given by address eg. E4.
         '''
         self.address = address
+        self.column = address[0]
+        self.row = address[1]
         addressCenter = State.game.board.grid[address].rect.center
         self.rect.center = addressCenter
 
@@ -399,6 +408,60 @@ class Piece(State):
         return f"A {self.typeOfPiece} on {self.address}."
 
 
+class Rook(Piece):
+    ''' A subclass of Piece, that holds the restrictions related to a rook.
+    '''
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, subtypeInst = self, **kwargs)
+
+        def isSquareOnPath(self, address):
+            if address[0] == self.address[0] or address[1] == self.address[1]:
+                return True
+            return False
+
+        def isSquareReachable(self, address):
+            ''' Check to see if the squares the piece must travel through are clear.
+            '''
+            columns = ['x', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+            if address[0] == self.address[0]: # It is a vertical movement.
+                targetRow = address[1]
+                if self.row < targetRow:
+                    rowsToCheck = range(self.row + 1, targetRow)
+                else:
+                    rowsToCheck = range(targetRow + 1, self.row)
+                for row in rowsToCheck:
+                    if State.game.board.grid[f"{self.column}{row}"].isEmpty():
+                        continue
+                    return False # Path is blocked.
+            if address[1] == self.address[1]: # It is a horizontal movement. We need to check columns
+                targetColumn = address[0]
+                currentColumnNumber = columns.find(self.column)
+                targetColumnNumber = columns.find(targetColumn)
+                if currentColumnNumber < targetColumnNumber:
+                    columnsToCheck = range(currentColumnNumber + 1, targetColumnNumber)
+                else:
+                    columnsToCheck = range(targetColumnNumber + 1, currentColumnNumber)
+                for columnNumber in columnsToCheck:
+                    column = columns[columnNumber]
+                    if State.game.board.grid[f"{column}{self.row}"].isEmpty():
+                        continue
+                    return False # Path is blocked.
+
+
+
+        def amIHere(self, address):
+            ''' Check if the given address is the same as the current address.
+            '''
+            if self.address == address:
+                return True
+            return False
+
+
+
+                
+                
+
+    pass
 
 
 def main():
