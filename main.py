@@ -224,7 +224,7 @@ class Board(State):
         for column in columns:
             xOffset = squareWidth * columns.find(column) # Calculate the pixle position of this column.
             for row in (1,2,3,4,5,6,7,8):
-                yOffset = squareHeight * (row - 1) # Calculate the pixle position of this row.
+                yOffset = squareHeight * (8 - row) # Calculate the pixle position of this row.
                 rect = pygame.Rect(xOffset, yOffset, squareWidth, squareHeight)
                 loc = Location(column, row, rect)
                 self.grid[f"{column}{row}"] = loc
@@ -337,13 +337,11 @@ class Piece(State):
         ''' Returns a string describing the object.
         '''
         return f"A {self.typeOfPiece} on {self.address}."
-    
-def config():
-    ''' Configures the game.
-    '''
+
+
+
 
 def main():
-    config()
     game = ChessGame('john', 'paul')
     engine = Engine(game)
 
