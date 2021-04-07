@@ -253,9 +253,9 @@ class Board(State):
             # Add the bishops
             if address[0] == 'c' or address[0] == 'f':
                 if address[1] == '1':
-                    self.grid[address].occupant = Piece('white', 'bishop', address = address); continue
+                    self.grid[address].occupant = Bishop('white', 'bishop', address = address); continue
                 if address[1] == '8':
-                    self.grid[address].occupant = Piece('black', 'bishop', address = address); continue
+                    self.grid[address].occupant = Bishop('black', 'bishop', address = address); continue
             # Add the queens
             if address[0] == 'd':
                 if address[1] == '1':
@@ -409,17 +409,26 @@ class Piece(State):
         '''
         self.rect.center = newCenter
 
-    def __str__(self):
-        ''' Returns a string describing the object.
-        '''
-        return f"A {self.typeOfPiece} on {self.address}."
-
     def amIHere(self, address):
         ''' Check if the given address is the same as the current address.
         '''
         if self.address == address:
             return True
         return False
+
+    def isSquareLegal(self, address):
+        ''' Uses several sub-methods to anser the question of legit-ness by checking:
+                * Is it a move that this peice could ever do (on an empty board).
+                * Is this move obstructed?
+        '''
+        if self.isSquareOnPath(address) and self.isSquareReachable(address):
+            return True
+        return False
+
+    def __str__(self):
+        ''' Returns a string describing the object.
+        '''
+        return f"A {self.typeOfPiece} on {self.address}."
 
 
 class Rook(Piece):
@@ -439,16 +448,10 @@ class Rook(Piece):
         else:
             super().place(address, *args, **kwargs) # It is the first time the piece is on the board, so it is where it is; there is nothing to check.
 
-    def isSquareLegal(self, address):
-        ''' Uses several sub-methods to anser the question of legit-ness by checking:
-                * Is it a move that this peice could ever do (on an empty board).
-                * Is this move obstructed?
-        '''
-        if self.isSquareOnPath(address) and self.isSquareReachable(address):
-            return True
-        return False
 
     def isSquareOnPath(self, address):
+        ''' Checks if address of target square is a square that lies on a primitive movement path of a rook.
+        '''
         if address[0] == self.address[0] or address[1] == self.address[1]:
             return True
         return False
@@ -481,6 +484,63 @@ class Rook(Piece):
                 if State.game.board.grid[f"{column}{self.row}"].isEmpty():
                     continue
                 return False # Path is blocked.
+
+
+class Bishop(Piece):
+    ''' A subclass of Piece, that holds the restrictions related to a rook.
+    '''
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, subtypeInst = self, **kwargs)
+
+    def place(self, address, *args, **kwargs):
+        ''' Does the checking for validity of the requested placement, then runs the super().place.
+        '''
+        if hasattr(self, 'address'):
+            if self.isSquareLegal(address):
+                super().place(address, *args, **kwargs) # It's all good. Go to the square at the new address.
+            else:
+                super().place(self.address, *args, **kwargs) # Go back to where you started, because the move is illegal.
+        else:
+            super().place(address, *args, **kwargs) # It is the first time the piece is on the board, so it is where it is; there is nothing to check.
+
+
+    def isSquareOnPath(self, address):
+        ''' Checks if address of target square is a square that lies on a primitive movement path of a bishop
+        '''
+        columns = ['x', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+        currentColumnNumber = columns.index(self.address[0])
+        currentRow = int(self.address[1])
+        targetColumnNumber = columns.index(address[0])
+        targetRow = int(address[1])
+        deltaX = abs(currentColumnNumber - targetColumnNumber)
+        deltaY = abs(currentRow - targetRow)
+        if deltaX == deltaY:
+            return True
+        return False
+
+    def isSquareReachable(self, address):
+        ''' Check to see if the squares the piece must travel through are clear.
+        '''
+        columnNames = ['x', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+        rowNumbers = [0,1,2,3,4,5,6,7,8]
+        currentColumnNumber = columnNames.index(self.address[0])
+        currentRow = int(self.address[1])
+        targetColumnNumber = columnNames.index(address[0])
+        targetRow = int(address[1])
+        if targetColumnNumber > currentColumnNumber:
+            if targetRow > currentRow: # |/
+                squaresToCheck = [f"{str(x)}{str(y)}" for x, y in zip(columnNames[currentColumnNumber:targetColumnNumber], rowNumbers[currentRow:targetRow])]
+            else: # |\
+                squaresToCheck = [f"{str(x)}{str(y)}" for x, y in zip(columnNames[currentColumnNumber:targetColumnNumber], rowNumbers[targetRow:currentRow:-1])]
+        else:
+            if targetRow > currentRow: # \|
+                squaresToCheck = [f"{str(x)}{str(y)}" for x, y in zip(columnNames[targetColumnNumber:currentColumnNumber:-1], rowNumbers[currentRow:targetRow])]
+            else: # /|
+                squaresToCheck = [f"{str(x)}{str(y)}" for x, y in zip(columnNames[targetColumnNumber:currentColumnNumber:-1], rowNumbers[targetRow:currentRow:-1])]
+        for square in squaresToCheck:
+            if State.game.board.grid[square].occupant is not None:
+                return False
+        return True
 
 
 def main():
