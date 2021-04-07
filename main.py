@@ -39,6 +39,9 @@ class Engine(State):
         # Blit pieces
         for piece in Piece.register:
             self.screen.blit(piece.image, piece.rect)
+        # Blit the clicked piece.
+        if State.clickedPiece is not None: # If we have a piece in hand
+            self.screen.blit(State.clickedPiece.image, State.clickedPiece.rect)
 
             
         # Post the updates to the display
@@ -418,6 +421,7 @@ class Piece(State):
             return True
         return False
 
+
 class Rook(Piece):
     ''' A subclass of Piece, that holds the restrictions related to a rook.
     '''
@@ -427,8 +431,13 @@ class Rook(Piece):
     def place(self, address, *args, **kwargs):
         ''' Does the checking for validity of the requested placement, then runs the super().place.
         '''
-        if self.isSquareLegal(address):
-            super().place(address, *args, **kwargs)
+        if hasattr(self, 'address'):
+            if self.isSquareLegal(address):
+                super().place(address, *args, **kwargs) # It's all good. Go to the square at the new address.
+            else:
+                super().place(self.address, *args, **kwargs) # Go back to where you started, because the move is illegal.
+        else:
+            super().place(address, *args, **kwargs) # It is the first time the piece is on the board, so it is where it is; there is nothing to check.
 
     def isSquareLegal(self, address):
         ''' Uses several sub-methods to anser the question of legit-ness by checking:
@@ -449,19 +458,20 @@ class Rook(Piece):
         '''
         columns = ['x', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
         if address[0] == self.address[0]: # It is a vertical movement.
-            targetRow = address[1]
-            if self.row < targetRow:
-                rowsToCheck = range(self.row + 1, targetRow)
+            currentRow = int(self.row)
+            targetRow = int(address[1])
+            if currentRow < targetRow:
+                rowsToCheck = range(currentRow + 1, targetRow)
             else:
-                rowsToCheck = range(targetRow + 1, self.row)
+                rowsToCheck = range(targetRow + 1, currentRow)
             for row in rowsToCheck:
                 if State.game.board.grid[f"{self.column}{row}"].isEmpty():
                     continue
                 return False # Path is blocked.
         if address[1] == self.address[1]: # It is a horizontal movement. We need to check columns
             targetColumn = address[0]
-            currentColumnNumber = columns.find(self.column)
-            targetColumnNumber = columns.find(targetColumn)
+            currentColumnNumber = columns.index(self.column)
+            targetColumnNumber = columns.index(targetColumn)
             if currentColumnNumber < targetColumnNumber:
                 columnsToCheck = range(currentColumnNumber + 1, targetColumnNumber)
             else:
