@@ -272,6 +272,16 @@ class Board(State):
                 # Clear all other sqares.
                 self.grid[address].occupant = None
 
+    def removeOccupant(self, address):
+        ''' Removes the occupant from the square at the address given.
+        '''
+        self.grid[address].removeOccupant()
+
+    def addOccupant(self, address, occupant):
+        ''' Removes the occupant from the square at the address given.
+        '''
+        self.grid[address].addOccupant(occupant)
+
     def createGrid(self):
         ''' Create the grid of squares that make up the board, setting them as attributes of this instance.
         '''
@@ -336,6 +346,14 @@ class Location(State):
             return True
         return False
 
+    def removeOccupant(self):
+        ''' Remove the occupant from this address.
+        '''
+        self.occupant = None
+
+    def addOccupant(self, occupant):
+        self.occupant = occupant
+
     def __str__(self):
         ''' Returns the string of the address.
         '''
@@ -398,11 +416,14 @@ class Piece(State):
     def place(self, address):
         ''' Places piece on the square given by address eg. E4.
         '''
+        if hasattr(self, 'address'):
+            State.game.board.removeOccupant(self.address)
         self.address = address
         self.column = address[0]
         self.row = address[1]
         addressCenter = State.game.board.grid[address].rect.center
         self.rect.center = addressCenter
+        State.game.board.addOccupant(address, self)
 
     def moveTo(self, newCenter):
         ''' Moves the piece (rect of the piece) to the new center newCenter.
@@ -503,7 +524,6 @@ class Bishop(Piece):
         else:
             super().place(address, *args, **kwargs) # It is the first time the piece is on the board, so it is where it is; there is nothing to check.
 
-
     def isSquareOnPath(self, address):
         ''' Checks if address of target square is a square that lies on a primitive movement path of a bishop
         '''
@@ -519,6 +539,26 @@ class Bishop(Piece):
         return False
 
     def isSquareReachable(self, address):
+        ''' A serialization with addition approch.
+        '''
+        allSquares = [f"{row}{col}" for row in "abcdefgh" for col in range(1, 9)] # Handy list comprehention from IRC#python:disi
+        current = allSquares.index(self.address)
+        target =  allSquares.index(address)
+        delta = target - current
+
+        def test(current, target, delta):
+            if current != target:
+                if State.game.board.grid[allSquares[current]].occupant is None:
+                    test(current + delta, target, delta)
+                    return True
+                else:
+                    return False
+            else:
+                return False
+        return test(current, target, delta)
+
+
+    def isSquareReachable(self, address):
         ''' Check to see if the squares the piece must travel through are clear.
         '''
         columnNames = ['x', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
@@ -530,13 +570,17 @@ class Bishop(Piece):
         if targetColumnNumber > currentColumnNumber:
             if targetRow > currentRow: # |/
                 squaresToCheck = [f"{str(x)}{str(y)}" for x, y in zip(columnNames[currentColumnNumber:targetColumnNumber], rowNumbers[currentRow:targetRow])]
+                squaresToCheck = squaresToCheck[1:]
             else: # |\
-                squaresToCheck = [f"{str(x)}{str(y)}" for x, y in zip(columnNames[currentColumnNumber:targetColumnNumber], rowNumbers[targetRow:currentRow:-1])]
+                squaresToCheck = [f"{str(x)}{str(y)}" for x, y in zip(columnNames[currentColumnNumber:targetColumnNumber], rowNumbers[targetRow:currentRow].reverse())]
+                squaresToCheck = squaresToCheck[1:]
         else:
             if targetRow > currentRow: # \|
-                squaresToCheck = [f"{str(x)}{str(y)}" for x, y in zip(columnNames[targetColumnNumber:currentColumnNumber:-1], rowNumbers[currentRow:targetRow])]
+                squaresToCheck = [f"{str(x)}{str(y)}" for x, y in zip(columnNames[targetColumnNumber:currentColumnNumber], rowNumbers[currentRow:targetRow])]
+                squaresToCheck = squaresToCheck[1:]
             else: # /|
-                squaresToCheck = [f"{str(x)}{str(y)}" for x, y in zip(columnNames[targetColumnNumber:currentColumnNumber:-1], rowNumbers[targetRow:currentRow:-1])]
+                squaresToCheck = [f"{str(x)}{str(y)}" for x, y in zip(columnNames[targetColumnNumber:currentColumnNumber], rowNumbers[targetRow:currentRow].reverse())]
+                squaresToCheck = squaresToCheck[1:]
         for square in squaresToCheck:
             if State.game.board.grid[square].occupant is not None:
                 return False
