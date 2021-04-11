@@ -29,6 +29,8 @@ class Engine(State):
         self.screenSize = (self.screenWidth, self.screenHeight)
         self.screen = pygame.display.set_mode(self.screenSize)
         self.updateDisplay()
+        self.game.printTextBoard()
+        self.printBoard = self.game.printTextBoard
         self.loop()
 
     def updateDisplay(self):
@@ -83,6 +85,7 @@ class Engine(State):
     def mouseClick(self):
         ''' Checks if something interesting was clicked on, and does the thing needed.
         '''
+        self.printBoard()
         clickPosition = pygame.mouse.get_pos()
         possibleChosenPiece = self.findClickedPiece(clickPosition)
         if possibleChosenPiece is not None:
@@ -92,10 +95,12 @@ class Engine(State):
     def mouseRelease(self):
         ''' Does the actions required when the mouse button is released.
         '''
+        self.printBoard()
         if State.clickedPiece is not None:
             newAddress = self.findDropSquare(State.clickedPiece)
             self.placeClickedPiece(newAddress)
             State.clickedPiece = None
+            self.printBoard()
 
     def loop(self):
         while True:
@@ -104,7 +109,10 @@ class Engine(State):
                     self.mouseClick()
                 if event.type == pygame.MOUSEBUTTONUP:
                     self.mouseRelease()
-                if event.type == pygame.QUIT: sys.exit()
+                if event.type == pygame.QUIT:
+                    sys.exit()
+                if event.type == pygame.K_q:
+                    sys.exit()
             self.updateClickedPieceLocation()
             self.updateDisplay()
 
@@ -123,7 +131,45 @@ class ChessGame(State):
         p2 = Player(name=p2)
         clock1 = Clock('60:00')
         clock2 = Clock('60:00')
-        
+
+    def printTextBoard(self):
+        textBoard = []
+        allSquares = [ f"{row}{col}"for col in range(1, 9) for row in "abcdefgh" ] # Handy list comprehention from IRC#python:disi
+        header = '| - - - - - - - - '
+        footer = '|\n| - - - - - - - - |'
+        textBoard.append(header)
+        for num, squareAddress in enumerate(allSquares):
+            if num % 8 == 0:
+                textBoard.append('|\n| ')
+            occupant = self.board.grid[squareAddress].occupant
+            if occupant is None:
+                code = '.'
+            elif issubclass(type(occupant), Piece):
+                color = occupant.color
+                if type(occupant) is Rook:
+                    code = 'R' if color == 'white' else 'r'
+                elif type(occupant) is Bishop:
+                    code = 'B' if color == 'white' else 'b'
+                elif type(occupant) is Knight:
+                    code = 'N' if color == 'white' else 'n'
+                elif type(occupant) is Queen:
+                    code = 'Q' if color == 'white' else 'q'
+                elif type(occupant) is King:
+                    code = 'K' if color == 'white' else 'k'
+                elif type(occupant) is Pawn:
+                    code = 'P' if color == 'white' else 'p'
+                elif type(occupant) is Piece:
+                    code = 'X' if color == 'white' else 'x'
+            else:
+                return False
+            textBoard.append(code)
+            textBoard.append(' ')
+        textBoard.append(footer)
+        stringBoard = ''.join(textBoard)
+        rowList = stringBoard.split('\n')
+        board = '\n'.join(reversed(rowList))
+        print(board)
+
 
 class Clock(State):
     ''' A time keeping device.
@@ -278,7 +324,7 @@ class Board(State):
         self.grid[address].removeOccupant()
 
     def addOccupant(self, address, occupant):
-        ''' Removes the occupant from the square at the address given.
+        ''' Adds the occupant to the square at the address given.
         '''
         self.grid[address].addOccupant(occupant)
 
@@ -525,26 +571,84 @@ class Bishop(Piece):
             super().place(address, *args, **kwargs) # It is the first time the piece is on the board, so it is where it is; there is nothing to check.
 
     def isSquareOnPath(self, address):
-        ''' Checks if address of target square is a square that lies on a primitive movement path of a bishop
+        ''' Returns bool dependant on whether address is on movement path of a bishop.
         '''
-        columns = ['x', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
-        currentColumnNumber = columns.index(self.address[0])
-        currentRow = int(self.address[1])
-        targetColumnNumber = columns.index(address[0])
-        targetRow = int(address[1])
-        deltaX = abs(currentColumnNumber - targetColumnNumber)
-        deltaY = abs(currentRow - targetRow)
-        if deltaX == deltaY:
+        allSquares = [f"{col}{row}" for row in range(1, 9) for col in "abcdefgh" ] # Handy list comprehention from IRC#python:disi
+        delta = (allSquares.index(address) - allSquares.index(self.address))
+        if delta % 7 == 0 or delta % 9 == 0:
             return True
         return False
 
     def isSquareReachable(self, address):
-        ''' A serialization with addition approch.
+        ''' Checks the squares that could block the movement for existance of a piece on the square. 
+                It does this by serializing the board, and using simple arithmatic to find the next square on the diagonal.
         '''
-        allSquares = [f"{row}{col}" for row in "abcdefgh" for col in range(1, 9)] # Handy list comprehention from IRC#python:disi
+        allSquares = [f"{column}{row}" for row in range(1, 9) for column in "abcdefgh"] # Handy list comprehention from IRC#python:disi
         current = allSquares.index(self.address)
         target =  allSquares.index(address)
         delta = target - current
+        sign = int(delta / abs(delta)) # Handy function from boejiden on #math on Freenode.
+
+        if delta % 9 == 0: # Positive slope diagonal
+            delta = 9 * sign
+        elif delta % 7 == 0: # Negative slope diagonal
+            delta = 7 * sign
+        else:
+            return False
+
+        def test(current, target, delta):
+            if State.game.board.grid[allSquares[current]].occupant is None:
+                if current != target:
+                    return test(current + delta, target, delta)
+                else:
+                    return True
+            else:
+                return False
+        return test(current + delta, target, delta) # Check the next square, since we are still "on" the "current" square.
+
+
+class Knight(Piece):
+    ''' A subclass of Piece, that holds the restrictions related to a rook.
+    '''
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, subtypeInst = self, **kwargs)
+
+    def place(self, address, *args, **kwargs):
+        ''' Does the checking for validity of the requested placement, then runs the super().place.
+        '''
+        if hasattr(self, 'address'):
+            if self.isSquareLegal(address):
+                super().place(address, *args, **kwargs) # It's all good. Go to the square at the new address.
+            else:
+                super().place(self.address, *args, **kwargs) # Go back to where you started, because the move is illegal.
+        else:
+            super().place(address, *args, **kwargs) # It is the first time the piece is on the board, so it is where it is; there is nothing to check.
+
+    def isSquareOnPath(self, address):
+        ''' Returns bool dependant on whether address is on movement path of a bishop.
+        '''
+        allSquares = [f"{row}{col}" for row in "abcdefgh" for col in range(1, 9)] # Handy list comprehention from IRC#python:disi
+        delta = (allSquares.index(address) - allSquares.index(self.address))
+        if delta % 7 == 0 or delta % 9 == 0:
+            return True
+        return False
+
+    def isSquareReachable(self, address):
+        ''' Checks the squares that could block the movement for existance of a piece on the square. 
+                It does this by serializing the board, and using simple arithmatic to find the next square on the diagonal.
+        '''
+        allSquares = [f"{column}{row}" for row in range(1, 9) for column in "abcdefgh"] # Handy list comprehention from IRC#python:disi
+        current = allSquares.index(self.address)
+        target =  allSquares.index(address)
+        delta = target - current
+        sign = delta ** 0 # To the zero power, maintains the sign of the number. Cool!
+
+        if delta % 9 == 0: # Positive slope diagonal
+            delta = 9 * sign
+        elif delta % 7 == 0: # Negative slope diagonal
+            delta = 7 * sign
+        else:
+            return False
 
         def test(current, target, delta):
             if current != target:
@@ -555,37 +659,17 @@ class Bishop(Piece):
                     return False
             else:
                 return False
-        return test(current, target, delta)
+        return test(current + delta, target, delta) # Check the next square, since we are still "on" the "current" square.
 
 
-    def isSquareReachable(self, address):
-        ''' Check to see if the squares the piece must travel through are clear.
-        '''
-        columnNames = ['x', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
-        rowNumbers = [0,1,2,3,4,5,6,7,8]
-        currentColumnNumber = columnNames.index(self.address[0])
-        currentRow = int(self.address[1])
-        targetColumnNumber = columnNames.index(address[0])
-        targetRow = int(address[1])
-        if targetColumnNumber > currentColumnNumber:
-            if targetRow > currentRow: # |/
-                squaresToCheck = [f"{str(x)}{str(y)}" for x, y in zip(columnNames[currentColumnNumber:targetColumnNumber], rowNumbers[currentRow:targetRow])]
-                squaresToCheck = squaresToCheck[1:]
-            else: # |\
-                squaresToCheck = [f"{str(x)}{str(y)}" for x, y in zip(columnNames[currentColumnNumber:targetColumnNumber], rowNumbers[targetRow:currentRow].reverse())]
-                squaresToCheck = squaresToCheck[1:]
-        else:
-            if targetRow > currentRow: # \|
-                squaresToCheck = [f"{str(x)}{str(y)}" for x, y in zip(columnNames[targetColumnNumber:currentColumnNumber], rowNumbers[currentRow:targetRow])]
-                squaresToCheck = squaresToCheck[1:]
-            else: # /|
-                squaresToCheck = [f"{str(x)}{str(y)}" for x, y in zip(columnNames[targetColumnNumber:currentColumnNumber], rowNumbers[targetRow:currentRow].reverse())]
-                squaresToCheck = squaresToCheck[1:]
-        for square in squaresToCheck:
-            if State.game.board.grid[square].occupant is not None:
-                return False
-        return True
+class Queen(Piece):
+    pass
 
+class King(Piece):
+    pass
+
+class Pawn(Piece):
+    pass
 
 def main():
     game = ChessGame('john', 'paul')
